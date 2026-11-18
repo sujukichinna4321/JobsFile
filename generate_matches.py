@@ -10,14 +10,9 @@ NOW_BD = datetime.now(BD)
 TODAY_BD = NOW_BD.date()
 END_DATE = TODAY_BD + timedelta(days=2)
 
-# সোর্স লিংকগুলো এখান থেকে নেওয়া হবে
 SONYLIV_API = os.getenv("SonyLiv_API")
 FANCEODE_API = os.getenv("FANCEODE_API")
 TAPMAD_API = os.getenv("TAPMAD_API")
-
-# ফুটবল ও ক্রিকেট API আপাতত বন্ধ
-# APIFOOTBALL_KEY = os.getenv("APIFOOTBALL_KEY")
-# CRICKETDATA_KEY = os.getenv("CRICKETDATA_KEY")
 
 DEFAULT_IMAGE = os.environ.get("DEFAULT_IMAGE", "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png")
 SUBTITLE_SUFFIX = os.environ.get("SUBTITLE_SUFFIX", " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family.")
@@ -68,8 +63,14 @@ IGNORE_SPORTS = [
     "georgia", "spain", "barcelona", "las vegas", "circuit", "round of 16"
 ]
 
+def format_team_name(name):
+    formatted = name
+    formatted = re.sub(r'\bWomen\b', '(W)', formatted, flags=re.IGNORECASE)
+    formatted = re.sub(r'\bMen\b', '(M)', formatted, flags=re.IGNORECASE)
+    formatted = re.sub(r'\bU(\d+)\b', r'(U\1)', formatted, flags=re.IGNORECASE)
+    return re.sub(r'\s+', ' ', formatted).strip()
+
 def fetch_json(url, headers=None):
-    """লিংক কাজ না করলে বা ডেটা না পেলে খালি লিস্ট রিটার্ন করবে"""
     if not url: return []
     try:
         r = requests.get(url, headers=headers, timeout=30)
@@ -179,7 +180,11 @@ def build_entry(ev, platform_tag):
     
     fmt = guess_format(comp) if sport == "cricket" else ""
 
-    title = f"{t1} 🆚 {t2} । Watch on {channel}"
+    # নোটিফিকেশন টাইটেলে সংক্ষিপ্ত রূপ ব্যবহার
+    t1_fmt = format_team_name(t1)
+    t2_fmt = format_team_name(t2)
+    title = f"{t1_fmt} 🆚 {t2_fmt} । Watch on {channel}"
+    
     subtitle = f"{sub_name}{SUBTITLE_SUFFIX}"
     
     poster_url = get_poster_link(t1, t2, sub_name, fmt, sport, start)
@@ -198,7 +203,6 @@ def build_entry(ev, platform_tag):
 def main():
     results, seen = [], set()
     
-    # শুধুমাত্র ব্রডকাস্ট সোর্সগুলো ব্যবহার করা হচ্ছে
     broadcast_sources = [
         ("fancode", FANCEODE_API, "Fancode"),
         ("sonyliv", SONYLIV_API, "SonyLiv"),
