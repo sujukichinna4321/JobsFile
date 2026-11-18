@@ -10,10 +10,12 @@ NOW_BD = datetime.now(BD)
 TODAY_BD = NOW_BD.date()
 END_DATE = TODAY_BD + timedelta(days=2)
 
-# সিক্রেট থেকে API গুলো নেওয়া হচ্ছে
+# সিক্রেট থেকে সব API নেওয়া হচ্ছে
 SONYLIV_API = os.getenv("SonyLiv_API")
 FANCEODE_API = os.getenv("FANCEODE_API")
 TAPMAD_API = os.getenv("TAPMAD_API")
+APIFOOTBALL_KEY = os.getenv("APIFOOTBALL_KEY")
+CRICKETDATA_KEY = os.getenv("CRICKETDATA_KEY")
 
 DEFAULT_IMAGE = os.environ.get("DEFAULT_IMAGE", "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png")
 SUBTITLE_SUFFIX = os.environ.get("SUBTITLE_SUFFIX", " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family.")
@@ -49,14 +51,13 @@ CRICKET_LEAGUES = {
     "nepal":     ("NEPAL PREMIER LEAGUE 2026",      "Fancode"),
 }
 
-# জনপ্রিয় এবং বাংলাদেশ/পাকিস্তান/ভারতের দলগুলো
 POPULAR_KEYWORDS = [
     "bangladesh", "pakistan", "india", "bpl", "psl", "ipl", "world cup", 
     "asia cup", "champions trophy", "premier league", "la liga", "champions league",
     "real madrid", "barcelona", "manchester", "liverpool", "arsenal", "chelsea", 
     "bayern", "psg", "juventus", "brazil", "argentina", "kolkata", "mumbai", 
     "chennai", "karachi", "lahore", "dhaka", "comilla", "brisbane", "sydney", 
-    "melbourne", "perth", "hobart", "women" # কিছু ওমেন ম্যাচও জনপ্রিয়
+    "melbourne", "perth", "hobart", "women", "inter"
 ]
 
 IGNORE_SPORTS = [
@@ -65,10 +66,10 @@ IGNORE_SPORTS = [
     "georgia", "spain", "barcelona", "las vegas", "circuit", "round of 16"
 ]
 
-def fetch_json(url):
+def fetch_json(url, headers=None):
     if not url: return []
     try:
-        r = requests.get(url, timeout=30)
+        r = requests.get(url, headers=headers, timeout=30)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -77,7 +78,7 @@ def fetch_json(url):
 def _iter_events(data):
     if isinstance(data, list): return data
     if isinstance(data, dict):
-        for k in ("events", "data", "matches", "items", "results"):
+        for k in ("events", "data", "matches", "items", "results", "response"):
             v = data.get(k)
             if isinstance(v, list): return v
     return []
@@ -89,29 +90,28 @@ def parse_start(ev):
     if "startTime" in ev:
         try: return datetime.strptime(ev["startTime"], "%I:%M:%S %p %d-%m-%Y").replace(tzinfo=BD)
         except: pass
+    if "fixture" in ev and "date" in ev["fixture"]:
+        try: return datetime.strptime(ev["fixture"]["date"], "%Y-%m-%dT%H:%M:%S%z").astimezone(BD)
+        except: pass
     return None
 
 def extract_teams(ev):
+    # ফুটবল API ফরম্যাট
+    if "teams" in ev and "home" in ev["teams"] and "away" in ev["teams"]:
+        return ev["teams"]["home"]["name"], ev["teams"]["away"]["name"]
+    # সাধারণ ফরম্যাট
     if "team_1" in ev and "team_2" in ev:
         return str(ev["team_1"]).strip(), str(ev["team_2"]).strip()
     if "VideoName" in ev and " vs " in ev["VideoName"]:
         parts = ev["VideoName"].split(" vs ")
-        if len(parts) >= 2:
-            return parts[0].strip(), parts[1].strip()
+        if len(parts) >= 2: return parts[0].strip(), parts[1].strip()
     return "", ""
 
 def extract_competition(ev):
     if "CategoryName" in ev: return ev["CategoryName"]
     if "event_name" in ev: return ev["event_name"]
+    if "league" in ev and "name" in ev["league"]: return ev["league"]["name"]
     return ""
-
-def extract_channel(ev, default_channel):
-    keys = ("channel", "broadcaster", "platform", "channel_name", "broadcast", "network")
-    for k in keys:
-        v = ev.get(k)
-        if isinstance(v, str) and v.strip(): return v.strip()
-        if isinstance(v, list) and len(v) > 0 and isinstance(v[0], str): return v[0].strip()
-    return default_channel
 
 def detect_sport(ev, comp):
     s = (ev.get("sport") or ev.get("sportType") or ev.get("event_category") or "").lower()
@@ -157,20 +157,12 @@ def get_poster_link(t1, t2, sub_name, fmt, sport, start):
 
 def is_popular_and_valid(t1, t2, comp):
     full_text = f"{t1} {t2} {comp}".lower()
-    
-    # ১. অপ্রয়োজনীয় খেলা বাদ
-    if "tbc" in t1.lower() or "tbc" in t2.lower() or "tbd" in t1.lower(): return False
+    if "tbc" in t1.lower() or "tbc" in t2.lower(): return False
     for word in IGNORE_SPORTS:
         if word in full_text: return False
-            
-    # ২. জনপ্রিয় কি না চেক করা
-    is_popular = False
     for keyword in POPULAR_KEYWORDS:
-        if keyword in full_text:
-            is_popular = True
-            break
-            
-    return is_popular
+        if keyword in full_text: return True
+    return False
 
 def build_entry(ev, platform_tag):
     start = parse_start(ev)
@@ -181,13 +173,14 @@ def build_entry(ev, platform_tag):
     if not t1 or not t2: return None
 
     comp = extract_competition(ev)
-    
-    # এখানে ফিল্টার করা হচ্ছে যেন শুধু জনপ্রিয় ম্যাচ আসে
     if not is_popular_and_valid(t1, t2, comp): return None
 
     sport = detect_sport(ev, comp)
     sub_name, default_channel = league_meta(sport, comp)
-    channel = extract_channel(ev, default_channel)
+    
+    channel = default_channel
+    if "channel" in ev: channel = ev["channel"]
+    
     fmt = guess_format(comp) if sport == "cricket" else ""
 
     title = f"{t1} 🆚 {t2} । Watch on {channel}"
@@ -209,27 +202,55 @@ def build_entry(ev, platform_tag):
 def main():
     results, seen = [], set()
     
-    # সোর্স লিস্ট (সিক্রেট ভ্যারিয়েবল থেকে)
-    sources = [
+    # ১. ৯০% ডেটা সোর্স (SonyLiv, Fancode, Tapmad)
+    broadcast_sources = [
         ("fancode", FANCEODE_API, "Fancode"),
         ("sonyliv", SONYLIV_API, "SonyLiv"),
         ("tapmad",  TAPMAD_API, "Tapmad")
     ]
     
-    for name, url, tag in sources:
-        data = fetch_json(url)
-        events = _iter_events(data)
-        
+    for name, url, tag in broadcast_sources:
+        events = _iter_events(fetch_json(url))
         for ev in events:
             try:
                 entry = build_entry(ev, tag)
-            except Exception:
-                continue
-            if not entry: continue
-            key = (entry["Title"], entry["Date & Time"])
-            if key in seen: continue
-            seen.add(key)
-            results.append(entry)
+                if entry:
+                    key = (entry["Title"], entry["Date & Time"])
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(entry)
+            except: pass
+
+    # ২. ১০% ডেটা সোর্স (APIFootball - শুধু ফুটবল)
+    if APIFOOTBALL_KEY:
+        headers = {'x-apisports-key': APIFOOTBALL_KEY}
+        football_url = "https://v3.football.api-sports.io/fixtures?date=" + TODAY_BD.strftime("%Y-%m-%d")
+        football_events = _iter_events(fetch_json(football_url, headers=headers))
+        
+        for ev in football_events:
+            try:
+                entry = build_entry(ev, "APIFootball")
+                if entry:
+                    key = (entry["Title"], entry["Date & Time"])
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(entry)
+            except: pass
+
+    # ৩. ১০% ডেটা সোর্স (CricketData - শুধু ক্রিকেট)
+    if CRICKETDATA_KEY:
+        cricket_url = f"https://api.cricapi.com/v1/currentMatches?apikey={CRICKETDATA_KEY}&offset=0"
+        cricket_events = _iter_events(fetch_json(cricket_url))
+        
+        for ev in cricket_events:
+            try:
+                entry = build_entry(ev, "CricketData")
+                if entry:
+                    key = (entry["Title"], entry["Date & Time"])
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(entry)
+            except: pass
 
     with open("notifications.json", "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
