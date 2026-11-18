@@ -10,12 +10,14 @@ NOW_BD = datetime.now(BD)
 TODAY_BD = NOW_BD.date()
 END_DATE = TODAY_BD + timedelta(days=2)
 
-# সিক্রেট থেকে সব API নেওয়া হচ্ছে
+# সোর্স লিংকগুলো এখান থেকে নেওয়া হবে
 SONYLIV_API = os.getenv("SonyLiv_API")
 FANCEODE_API = os.getenv("FANCEODE_API")
 TAPMAD_API = os.getenv("TAPMAD_API")
-APIFOOTBALL_KEY = os.getenv("APIFOOTBALL_KEY")
-CRICKETDATA_KEY = os.getenv("CRICKETDATA_KEY")
+
+# ফুটবল ও ক্রিকেট API আপাতত বন্ধ
+# APIFOOTBALL_KEY = os.getenv("APIFOOTBALL_KEY")
+# CRICKETDATA_KEY = os.getenv("CRICKETDATA_KEY")
 
 DEFAULT_IMAGE = os.environ.get("DEFAULT_IMAGE", "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png")
 SUBTITLE_SUFFIX = os.environ.get("SUBTITLE_SUFFIX", " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family.")
@@ -67,12 +69,14 @@ IGNORE_SPORTS = [
 ]
 
 def fetch_json(url, headers=None):
+    """লিংক কাজ না করলে বা ডেটা না পেলে খালি লিস্ট রিটার্ন করবে"""
     if not url: return []
     try:
         r = requests.get(url, headers=headers, timeout=30)
         r.raise_for_status()
         return r.json()
-    except Exception:
+    except Exception as e:
+        print(f"Warning: Failed to fetch data from {url}. Skipping...")
         return []
 
 def _iter_events(data):
@@ -90,16 +94,9 @@ def parse_start(ev):
     if "startTime" in ev:
         try: return datetime.strptime(ev["startTime"], "%I:%M:%S %p %d-%m-%Y").replace(tzinfo=BD)
         except: pass
-    if "fixture" in ev and "date" in ev["fixture"]:
-        try: return datetime.strptime(ev["fixture"]["date"], "%Y-%m-%dT%H:%M:%S%z").astimezone(BD)
-        except: pass
     return None
 
 def extract_teams(ev):
-    # ফুটবল API ফরম্যাট
-    if "teams" in ev and "home" in ev["teams"] and "away" in ev["teams"]:
-        return ev["teams"]["home"]["name"], ev["teams"]["away"]["name"]
-    # সাধারণ ফরম্যাট
     if "team_1" in ev and "team_2" in ev:
         return str(ev["team_1"]).strip(), str(ev["team_2"]).strip()
     if "VideoName" in ev and " vs " in ev["VideoName"]:
@@ -110,7 +107,6 @@ def extract_teams(ev):
 def extract_competition(ev):
     if "CategoryName" in ev: return ev["CategoryName"]
     if "event_name" in ev: return ev["event_name"]
-    if "league" in ev and "name" in ev["league"]: return ev["league"]["name"]
     return ""
 
 def detect_sport(ev, comp):
@@ -202,7 +198,7 @@ def build_entry(ev, platform_tag):
 def main():
     results, seen = [], set()
     
-    # ১. ৯০% ডেটা সোর্স (SonyLiv, Fancode, Tapmad)
+    # শুধুমাত্র ব্রডকাস্ট সোর্সগুলো ব্যবহার করা হচ্ছে
     broadcast_sources = [
         ("fancode", FANCEODE_API, "Fancode"),
         ("sonyliv", SONYLIV_API, "SonyLiv"),
@@ -210,41 +206,14 @@ def main():
     ]
     
     for name, url, tag in broadcast_sources:
+        if not url: 
+            print(f"Warning: {name} API URL is not set in secrets. Skipping...")
+            continue
+            
         events = _iter_events(fetch_json(url))
         for ev in events:
             try:
                 entry = build_entry(ev, tag)
-                if entry:
-                    key = (entry["Title"], entry["Date & Time"])
-                    if key not in seen:
-                        seen.add(key)
-                        results.append(entry)
-            except: pass
-
-    # ২. ১০% ডেটা সোর্স (APIFootball - শুধু ফুটবল)
-    if APIFOOTBALL_KEY:
-        headers = {'x-apisports-key': APIFOOTBALL_KEY}
-        football_url = "https://v3.football.api-sports.io/fixtures?date=" + TODAY_BD.strftime("%Y-%m-%d")
-        football_events = _iter_events(fetch_json(football_url, headers=headers))
-        
-        for ev in football_events:
-            try:
-                entry = build_entry(ev, "APIFootball")
-                if entry:
-                    key = (entry["Title"], entry["Date & Time"])
-                    if key not in seen:
-                        seen.add(key)
-                        results.append(entry)
-            except: pass
-
-    # ৩. ১০% ডেটা সোর্স (CricketData - শুধু ক্রিকেট)
-    if CRICKETDATA_KEY:
-        cricket_url = f"https://api.cricapi.com/v1/currentMatches?apikey={CRICKETDATA_KEY}&offset=0"
-        cricket_events = _iter_events(fetch_json(cricket_url))
-        
-        for ev in cricket_events:
-            try:
-                entry = build_entry(ev, "CricketData")
                 if entry:
                     key = (entry["Title"], entry["Date & Time"])
                     if key not in seen:
