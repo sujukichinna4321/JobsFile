@@ -1,0 +1,40 @@
+name: Update Match Notifications  
+
+on:
+  schedule:
+    - cron: '5 18,0,6,12 * * *'  
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install requests pytz Pillow
+
+      - name: Generate notifications.json and Posters
+        env:
+          DEFAULT_IMAGE: "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png"
+          SUBTITLE_SUFFIX: " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family."
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+          CRICKETDATA_KEY: ${{ secrets.CRICKETDATA_KEY }}
+        run: python generate_matches.py
+
+      - name: Commit and push notifications.json and Posters
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add notifications.json posters/ assets/logos/
+          git commit -m "Auto-update notifications and posters ($(TZ=Asia/Dhaka date +'%d-%m-%Y %H:%M'))" || echo "No changes"
+          git push
