@@ -13,6 +13,7 @@ FONT_REGULAR_PATH = "assets/fonts/Oswald-Regular.ttf"
 OUTPUT_DIR = "posters"
 LOGO_BASE_DIR = "assets/Logo"
 DEFAULT_LOGO_PATH = "assets/Logo.png" 
+APP_LOGO_PATH = "assets/Logo.png" # Powered by এর পাশে বসানোর জন্য
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -23,6 +24,15 @@ def clean_name(name):
     for word in IGNORE_WORDS:
         name = re.sub(r'\b' + re.escape(word) + r'\b', '', name)
     return re.sub(r'[^a-z0-9]', '', name).strip()
+
+def format_team_name(name):
+    """Women -> (W), Men -> (M), U19 -> (U19) ইত্যাদি"""
+    formatted = name
+    formatted = re.sub(r'\bWomen\b', '(W)', formatted, flags=re.IGNORECASE)
+    formatted = re.sub(r'\bMen\b', '(M)', formatted, flags=re.IGNORECASE)
+    formatted = re.sub(r'\bU(\d+)\b', r'(U\1)', formatted, flags=re.IGNORECASE)
+    # অতিরিক্ত স্পেস পরিষ্কার করা
+    return re.sub(r'\s+', ' ', formatted).strip()
 
 def find_logo_path(team_name):
     team_clean = clean_name(team_name)
@@ -81,8 +91,8 @@ def create_poster(team1, team2, series_name, match_type, output_filename, sport_
 
     try:
         font_match = ImageFont.truetype(FONT_BOLD_PATH, 30)
-        font_vs = ImageFont.truetype(FONT_BOLD_PATH, 90) # VS ফন্ট বড় করা হলো
-        font_powered = ImageFont.truetype(FONT_REGULAR_PATH, 25) # Powered by ফন্ট
+        font_vs = ImageFont.truetype(FONT_BOLD_PATH, 90)
+        font_powered = ImageFont.truetype(FONT_REGULAR_PATH, 25)
     except:
         font_match = font_vs = font_powered = ImageFont.load_default()
 
@@ -94,11 +104,25 @@ def create_poster(team1, team2, series_name, match_type, output_filename, sport_
     draw.text(((POSTER_WIDTH - text_w) / 2 + 2, 22), series_clean, font=font_series_fit, fill="black")
     draw.text(((POSTER_WIDTH - text_w) / 2, 20), series_clean, font=font_series_fit, fill="white")
 
-    # ২. Powered by SAWARID APPS (নতুন যুক্ত হলো)
+    # ২. Powered by SAWARID APPS + Logo
     powered_text = "Powered by: SAWARID APPS"
     bbox_p = draw.textbbox((0, 0), powered_text, font=font_powered)
     p_w = bbox_p[2] - bbox_p[0]
-    draw.text(((POSTER_WIDTH - p_w) / 2, 75), powered_text, font=font_powered, fill="#CCCCCC")
+    p_h = bbox_p[3] - bbox_p[1]
+    
+    # লোগো লোড করা
+    app_logo = None
+    if os.path.exists(APP_LOGO_PATH):
+        app_logo = Image.open(APP_LOGO_PATH).convert("RGBA")
+        logo_height = 30  # টেক্সটের সাইজের সাথে মিল রেখে
+        logo_width = int(app_logo.width * (logo_height / app_logo.height))
+        app_logo = app_logo.resize((logo_width, logo_height), Image.Resampling.LANCZOS)
+        total_width = logo_width + 10 + p_w
+        start_x = (POSTER_WIDTH - total_width) / 2
+        canvas.paste(app_logo, (int(start_x), 75), app_logo)
+        draw.text((start_x + logo_width + 10, 75), powered_text, font=font_powered, fill="#CCCCCC")
+    else:
+        draw.text(((POSTER_WIDTH - p_w) / 2, 75), powered_text, font=font_powered, fill="#CCCCCC")
 
     # ৩. লোগো বসানো
     logo_size = 300
@@ -110,13 +134,16 @@ def create_poster(team1, team2, series_name, match_type, output_filename, sport_
 
     draw = ImageDraw.Draw(canvas)
 
-    # ৪. মাঝখানে VS (বড় করে)
+    # ৪. মাঝখানে VS
     bbox_vs = draw.textbbox((0, 0), "VS", font=font_vs)
     vs_w = bbox_vs[2] - bbox_vs[0]
     draw.text(((POSTER_WIDTH - vs_w) / 2, POSTER_HEIGHT//2 - 60), "VS", font=font_vs, fill="white")
 
-    # ৫. দলের নাম
-    team_text = f"{team1.upper()} vs {team2.upper()}"
+    # ৫. দলের নাম (সংক্ষিপ্ত রূপসহ)
+    team1_fmt = format_team_name(team1)
+    team2_fmt = format_team_name(team2)
+    team_text = f"{team1_fmt.upper()} vs {team2_fmt.upper()}"
+    
     font_teams_fit = get_font_size_to_fit(team_text, FONT_BOLD_PATH, 1100, 65)
     bbox_t = draw.textbbox((0, 0), team_text, font=font_teams_fit)
     t_w = bbox_t[2] - bbox_t[0]
@@ -125,7 +152,7 @@ def create_poster(team1, team2, series_name, match_type, output_filename, sport_
     draw.text(((POSTER_WIDTH - t_w) / 2 + 2, text_y + 2), team_text, font=font_teams_fit, fill="black")
     draw.text(((POSTER_WIDTH - t_w) / 2, text_y), team_text, font=font_teams_fit, fill="white")
 
-    # ৬. ম্যাচের ধরন (যদি থাকে)
+    # ৬. ম্যাচের ধরন
     if match_type:
         m_text = match_type.upper()
         bbox_m = draw.textbbox((0, 0), m_text, font=font_match)
