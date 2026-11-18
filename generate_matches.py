@@ -8,60 +8,52 @@ from poster_maker import create_poster
 BD = pytz.timezone("Asia/Dhaka")
 NOW_BD = datetime.now(BD)
 TODAY_BD = NOW_BD.date()
-END_DATE = TODAY_BD + timedelta(days=2)
+END_DATE = NOW_BD + timedelta(hours=48) # আগামী ৪৮ ঘণ্টা
 
 SONYLIV_API = os.getenv("SonyLiv_API")
 FANCEODE_API = os.getenv("FANCEODE_API")
 TAPMAD_API = os.getenv("TAPMAD_API")
 
-DEFAULT_IMAGE = os.environ.get("DEFAULT_IMAGE", "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png")
-SUBTITLE_SUFFIX = os.environ.get("SUBTITLE_SUFFIX", " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family.")
+DEFAULT_IMAGE = "https://raw.githubusercontent.com/samnite2290/img/gh-pages/HOME/HOME-LIVE-EVENT.png"
+SUBTITLE_SUFFIX = " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family."
 
-GITHUB_USER = "sujukichinna4321"
-GITHUB_REPO = "JobsFile"
-GITHUB_BRANCH = "main"
+GITHUB_USER = "samnite2290"
+GITHUB_REPO = "job"
+GITHUB_BRANCH = "gh-pages"
+
+# যেসকল ম্যাচ "On" হবে (খুব গুরুত্বপূর্ণ ম্যাচ)
+IMPORTANT_LEAGUES = ["world cup", "nations league", "ipl", "bpl", "psl", "premier league", "champions league", "la liga"]
 
 FOOTBALL_LEAGUES = {
-    "premier league":   ("ENGLISH PREMIER LEAGUE 2026/27", "TNT 1"),
-    "la liga":          ("SPANISH LA LIGA 2026/27",       "SonyLiv"),
-    "bundesliga":       ("GERMAN BUNDESLIGA 2026/27",      "SonyLiv"),
-    "serie a":          ("ITALIAN SERIE A 2026/27",        "SonyLiv"),
-    "ligue 1":          ("FRENCH LIGUE 1 2026/27",         "SonyLiv"),
-    "champions league": ("UEFA CHAMPIONS LEAGUE 2026/27",  "SonyLiv"),
-    "europa league":    ("UEFA EUROPA LEAGUE 2026/27",     "SonyLiv"),
-    "nations league":   ("FRIENDLY MATCH NATIONS LEAGUE 2026/27", "SonyLiv"),
-    "fifa world cup":   ("FIFA WORLD CUP 2026",            "T Sports"),
-    "friendly":         ("FRIENDLY MATCH 2026",            "T Sports"),
+    "premier league":   ("🏆 ENGLISH ⚽ PREMIER LEAGUE 2026/27", "TNT 1"),
+    "la liga":          ("🏆 SPANISH ⚽ LA LIGA 2026/27",       "SonyLiv"),
+    "bundesliga":       ("🏆 GERMAN ⚽ BUNDESLIGA 2026/27",      "SonyLiv"),
+    "serie a":          ("🏆 ITALIAN ⚽ SERIE A 2026/27",        "SonyLiv"),
+    "ligue 1":          ("🏆 FRENCH ⚽ LIGUE 1 2026/27",         "SonyLiv"),
+    "champions league": ("🏆 UEFA ⚽ CHAMPIONS LEAGUE 2026/27",  "SonyLiv"),
+    "europa league":    ("🏆 UEFA ⚽ EUROPA LEAGUE 2026/27",     "SonyLiv"),
+    "nations league":   ("🏆 UEFA ⚽ NATIONS LEAGUE 2026/27",    "SonyLiv"),
+    "fifa world cup":   ("🏆 FIFA ⚽ WORLD CUP 2026",            "T Sports"),
+    "friendly":         ("🏆 Friendly Match ⚽ 2026",            "T Sports"),
 }
 
 CRICKET_LEAGUES = {
-    "t20i":      ("T20I CRICKET 2026",              "Fancode"),
-    "t20":       ("T20 CRICKET 2026",               "Fancode"),
-    "t10":       ("T10 CRICKET 2026",               "Fancode"),
-    "odi":       ("ODI CRICKET 2026",               "Fancode"),
-    "test":      ("TEST CRICKET 2026",              "Fancode"),
-    "world cup": ("ICC MEN'S T20 WORLD CUP 2026", "Willow"),
-    "ipl":       ("INDIAN PREMIER LEAGUE 2026",     "SonyLiv"),
-    "bbl":       ("BIG BASH LEAGUE 2026",           "SonyLiv"),
-    "psl":       ("PSL 2026",                       "Tapmad"),
-    "bpl":       ("BPL 2026",                       "T Sports"),
-    "nepal":     ("NEPAL PREMIER LEAGUE 2026",      "Fancode"),
+    "t20i":      ("🏏 ICC MEN'S T20I CRICKET 2026",    "Fancode"),
+    "t20":       ("🏏 T20 CRICKET 2026",               "Fancode"),
+    "t10":       ("🏏 T10 CRICKET 2026",               "Fancode"),
+    "odi":       ("🏏 ODI CRICKET 2026",               "Fancode"),
+    "test":      ("🏏 TEST CRICKET 2026",              "Fancode"),
+    "world cup": ("🏆 ICC 🏏 MEN'S T20 WORLD CUP 2026", "Willow"),
+    "ipl":       ("🏏 INDIAN PREMIER LEAGUE 2026",     "SonyLiv"),
+    "bbl":       ("🏏 BIG BASH LEAGUE 2026",           "SonyLiv"),
+    "psl":       ("🏏 PSL 2026",                       "Tapmad"),
+    "bpl":       ("🏏 BPL 2026",                       "T Sports"),
+    "nepal":     ("🏏 NEPAL PREMIER LEAGUE 2026",      "Fancode"),
 }
 
-POPULAR_KEYWORDS = [
-    "bangladesh", "pakistan", "india", "bpl", "psl", "ipl", "world cup", 
-    "asia cup", "champions trophy", "premier league", "la liga", "champions league",
-    "real madrid", "barcelona", "manchester", "liverpool", "arsenal", "chelsea", 
-    "bayern", "psg", "juventus", "brazil", "argentina", "kolkata", "mumbai", 
-    "chennai", "karachi", "lahore", "dhaka", "comilla", "brisbane", "sydney", 
-    "melbourne", "perth", "hobart", "women", "inter"
-]
+POPULAR_KEYWORDS = ["bangladesh", "pakistan", "india", "bpl", "psl", "ipl", "world cup", "asia cup", "champions trophy", "premier league", "la liga", "champions league", "real madrid", "barcelona", "manchester", "liverpool", "arsenal", "chelsea", "bayern", "psg", "juventus", "brazil", "argentina", "kolkata", "mumbai", "chennai", "karachi", "lahore", "dhaka", "comilla", "brisbane", "sydney", "melbourne", "perth", "hobart", "women", "inter", "nations league"]
 
-IGNORE_SPORTS = [
-    "doubles", "atp", "wta", "tur", "turin", "day 1", "day 2", "day 3", "day 4",
-    "race", "practice", "qualifying", "grand prix", "tennis", "golf",
-    "georgia", "spain", "barcelona", "las vegas", "circuit", "round of 16"
-]
+IGNORE_SPORTS = ["doubles", "atp", "wta", "tur", "turin", "day 1", "day 2", "day 3", "day 4", "race", "practice", "qualifying", "grand prix", "tennis", "golf", "georgia", "spain", "barcelona", "las vegas", "circuit", "round of 16"]
 
 def format_team_name(name):
     formatted = name
@@ -76,8 +68,7 @@ def fetch_json(url, headers=None):
         r = requests.get(url, headers=headers, timeout=30)
         r.raise_for_status()
         return r.json()
-    except Exception as e:
-        print(f"Warning: Failed to fetch data from {url}. Skipping...")
+    except Exception:
         return []
 
 def _iter_events(data):
@@ -110,6 +101,19 @@ def extract_competition(ev):
     if "event_name" in ev: return ev["event_name"]
     return ""
 
+def extract_image(ev):
+    if "src" in ev and isinstance(ev["src"], str): return ev["src"]
+    if "ThumbnailStandard" in ev and isinstance(ev["ThumbnailStandard"], str): return ev["ThumbnailStandard"]
+    return ""
+
+def extract_channel(ev, default_channel):
+    keys = ("channel", "broadcaster", "platform", "channel_name", "broadcast", "network")
+    for k in keys:
+        v = ev.get(k)
+        if isinstance(v, str) and v.strip(): return v.strip()
+        if isinstance(v, list) and len(v) > 0 and isinstance(v[0], str): return v[0].strip()
+    return default_channel
+
 def detect_sport(ev, comp):
     s = (ev.get("sport") or ev.get("sportType") or ev.get("event_category") or "").lower()
     c = (comp or "").lower()
@@ -130,10 +134,31 @@ def league_meta(sport, comp):
     table = CRICKET_LEAGUES if sport == "cricket" else FOOTBALL_LEAGUES
     for key, val in table.items():
         if key in c: return val
-    return ("CRICKET 2026" if sport == "cricket" else "FOOTBALL 2026", "Fancode" if sport == "cricket" else "T Sports")
+    return ("🏏 CRICKET 2026" if sport == "cricket" else "⚽ FOOTBALL 2026", "Fancode" if sport == "cricket" else "T Sports")
 
 def bst_str(dt):
     return dt.strftime("%d-%m-%Y-%I:%M 00 %p").lower()
+
+def calc_multiple_time(sport, fmt, start_bd):
+    """হাফটাইম বা ইনিংস ব্রেক শেষে খেলা শুরুর আনুমানিক সময়"""
+    if sport == "football":
+        # প্রথমার্ধ ৪৫ মিনিট + হাফটাইম ১৫ মিনিট = ৬০ মিনিট
+        return start_bd + timedelta(minutes=60)
+    
+    if fmt == "T20":
+        # ২০ ওভার (প্রায় ৮৫-৯০ মিনিট) + ইনিংস ব্রেক (১৫ মিনিট) = ১০৫ মিনিট
+        return start_bd + timedelta(minutes=105)
+    if fmt == "T10":
+        # ১০ ওভার (প্রায় ৪৫ মিনিট) + ইনিংস ব্রেক (১০ মিনিট) = ৫৫ মিনিট
+        return start_bd + timedelta(minutes=55)
+    if fmt == "ODI":
+        # ৫০ ওভার (প্রায় ২১০ মিনিট) + ইনিংস ব্রেক (৩০ মিনিট) = ২৪০ মিনিট
+        return start_bd + timedelta(minutes=240)
+    if fmt == "Test":
+        # লাঞ্চ বা টি ব্রেক (প্রায় ২ ঘন্টা ৩০ মিনিট পর)
+        return start_bd + timedelta(minutes=150)
+    
+    return start_bd + timedelta(minutes=60)
 
 def get_poster_link(t1, t2, sub_name, fmt, sport, start):
     try:
@@ -164,7 +189,9 @@ def is_popular_and_valid(t1, t2, comp):
 def build_entry(ev, platform_tag):
     start = parse_start(ev)
     if not start: return None
-    if not (TODAY_BD <= start.date() <= END_DATE): return None 
+    
+    # আগামী ৪৮ ঘণ্টার ফিল্টার
+    if not (NOW_BD <= start <= END_DATE): return None 
         
     t1, t2 = extract_teams(ev)
     if not t1 or not t2: return None
@@ -175,26 +202,37 @@ def build_entry(ev, platform_tag):
     sport = detect_sport(ev, comp)
     sub_name, default_channel = league_meta(sport, comp)
     
-    channel = default_channel
-    if "channel" in ev: channel = ev["channel"]
-    
+    channel = extract_channel(ev, default_channel)
     fmt = guess_format(comp) if sport == "cricket" else ""
 
-    # নোটিফিকেশন টাইটেলে সংক্ষিপ্ত রূপ ব্যবহার
     t1_fmt = format_team_name(t1)
     t2_fmt = format_team_name(t2)
     title = f"{t1_fmt} 🆚 {t2_fmt} । Watch on {channel}"
     
+    # সাবটাইটেলে সাফিক্স যুক্ত করা
     subtitle = f"{sub_name}{SUBTITLE_SUFFIX}"
     
+    # ইমেজ লিংক
+    img_link = extract_image(ev) or DEFAULT_IMAGE
     poster_url = get_poster_link(t1, t2, sub_name, fmt, sport, start)
-    image = poster_url if poster_url else DEFAULT_IMAGE
+    image = poster_url if poster_url else img_link
+    
+    # ম্যাচ শুরুর ৫ মিনিট আগে
     date_time = bst_str(start - timedelta(minutes=5))
+
+    # মাল্টিপল টাইম লজিক
+    is_important = any(k in comp.lower() for k in IMPORTANT_LEAGUES)
+    multiple_on = "On" if is_important else "Off"
+    
+    multiple_time = ""
+    if is_important:
+        mt_time = calc_multiple_time(sport, fmt, start)
+        multiple_time = f"({bst_str(mt_time)})"
 
     return {
         "Date & Time": date_time,
-        "multipleTimeRun": "Off",
-        "multipleTime": "",
+        "multipleTimeRun": multiple_on,
+        "multipleTime": multiple_time,
         "Title": title,
         "Subtitle": subtitle,
         "Image": image,
@@ -210,10 +248,7 @@ def main():
     ]
     
     for name, url, tag in broadcast_sources:
-        if not url: 
-            print(f"Warning: {name} API URL is not set in secrets. Skipping...")
-            continue
-            
+        if not url: continue
         events = _iter_events(fetch_json(url))
         for ev in events:
             try:
@@ -225,8 +260,17 @@ def main():
                         results.append(entry)
             except: pass
 
+    # তারিখ অনুযায়ী সাজানো
+    results.sort(key=lambda x: datetime.strptime(x["Date & Time"], "%d-%m-%Y-%I:%M 00 %p"))
+
+    # ১৫০ লাইনের গ্যাপ তৈরি করা
+    gap = "\n" * 150
+    json_output = json.dumps(results, ensure_ascii=False, indent=2)
+    
+    # ফাইলে লেখা (গ্যাপসহ)
     with open("notifications.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
+        f.write(gap + json_output)
+        
     print(f"Generated notifications.json with {len(results)} entries.", flush=True)
 
 if __name__ == "__main__":
