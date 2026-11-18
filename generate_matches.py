@@ -10,6 +10,11 @@ NOW_BD = datetime.now(BD)
 TODAY_BD = NOW_BD.date()
 END_DATE = TODAY_BD + timedelta(days=2)
 
+# সিক্রেট থেকে API গুলো নেওয়া হচ্ছে
+SONYLIV_API = os.getenv("SonyLiv_API")
+FANCEODE_API = os.getenv("FANCEODE_API")
+TAPMAD_API = os.getenv("TAPMAD_API")
+
 DEFAULT_IMAGE = os.environ.get("DEFAULT_IMAGE", "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png")
 SUBTITLE_SUFFIX = os.environ.get("SUBTITLE_SUFFIX", " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family.")
 
@@ -17,7 +22,6 @@ GITHUB_USER = "sujukichinna4321"
 GITHUB_REPO = "JobsFile"
 GITHUB_BRANCH = "main"
 
-# এখানে ইমোজি বাদ দেওয়া হয়েছে
 FOOTBALL_LEAGUES = {
     "premier league":   ("ENGLISH PREMIER LEAGUE 2026/27", "TNT 1"),
     "la liga":          ("SPANISH LA LIGA 2026/27",       "SonyLiv"),
@@ -45,19 +49,24 @@ CRICKET_LEAGUES = {
     "nepal":     ("NEPAL PREMIER LEAGUE 2026",      "Fancode"),
 }
 
-SOURCES = [
-    ("fancode", "https://raw.githubusercontent.com/drmlive/fancode-live-events/main/fancode.json", "Fancode"),
-    ("sonyliv", "https://raw.githubusercontent.com/drmlive/sliv-live-events/main/sonyliv.json",   "SonyLiv"),
-    ("tapmad",  "https://gist.githubusercontent.com/albatr0ssss/3cff7a26be49b1d352c15f615067e7cd/raw/tapmad_bd.json", "Tapmad"),
+# জনপ্রিয় এবং বাংলাদেশ/পাকিস্তান/ভারতের দলগুলো
+POPULAR_KEYWORDS = [
+    "bangladesh", "pakistan", "india", "bpl", "psl", "ipl", "world cup", 
+    "asia cup", "champions trophy", "premier league", "la liga", "champions league",
+    "real madrid", "barcelona", "manchester", "liverpool", "arsenal", "chelsea", 
+    "bayern", "psg", "juventus", "brazil", "argentina", "kolkata", "mumbai", 
+    "chennai", "karachi", "lahore", "dhaka", "comilla", "brisbane", "sydney", 
+    "melbourne", "perth", "hobart", "women" # কিছু ওমেন ম্যাচও জনপ্রিয়
 ]
 
 IGNORE_SPORTS = [
     "doubles", "atp", "wta", "tur", "turin", "day 1", "day 2", "day 3", "day 4",
     "race", "practice", "qualifying", "grand prix", "tennis", "golf",
-    "georgia", "spain", "barcelona", "las vegas", "circuit"
+    "georgia", "spain", "barcelona", "las vegas", "circuit", "round of 16"
 ]
 
 def fetch_json(url):
+    if not url: return []
     try:
         r = requests.get(url, timeout=30)
         r.raise_for_status()
@@ -87,7 +96,8 @@ def extract_teams(ev):
         return str(ev["team_1"]).strip(), str(ev["team_2"]).strip()
     if "VideoName" in ev and " vs " in ev["VideoName"]:
         parts = ev["VideoName"].split(" vs ")
-        return parts[0].strip(), parts[1].strip()
+        if len(parts) >= 2:
+            return parts[0].strip(), parts[1].strip()
     return "", ""
 
 def extract_competition(ev):
@@ -138,28 +148,29 @@ def get_poster_link(t1, t2, sub_name, fmt, sport, start):
         sport_type = "Cricket" if sport == "cricket" else "Soccer"
         match_type = fmt if fmt else ""
         
-        create_poster(
-            team1=t1,
-            team2=t2,
-            series_name=sub_name,
-            match_type=match_type,
-            output_filename=filename,
-            sport_type=sport_type
-        )
+        create_poster(team1=t1, team2=t2, series_name=sub_name, match_type=match_type, output_filename=filename, sport_type=sport_type)
         
         raw_link = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/posters/{filename}"
         return raw_link
     except Exception:
         return None
 
-def is_valid_match(t1, t2, comp):
+def is_popular_and_valid(t1, t2, comp):
     full_text = f"{t1} {t2} {comp}".lower()
-    if "tbc" in t1.lower() or "tbc" in t2.lower() or "tbd" in t1.lower():
-        return False
+    
+    # ১. অপ্রয়োজনীয় খেলা বাদ
+    if "tbc" in t1.lower() or "tbc" in t2.lower() or "tbd" in t1.lower(): return False
     for word in IGNORE_SPORTS:
-        if word in full_text:
-            return False
-    return True
+        if word in full_text: return False
+            
+    # ২. জনপ্রিয় কি না চেক করা
+    is_popular = False
+    for keyword in POPULAR_KEYWORDS:
+        if keyword in full_text:
+            is_popular = True
+            break
+            
+    return is_popular
 
 def build_entry(ev, platform_tag):
     start = parse_start(ev)
@@ -170,7 +181,9 @@ def build_entry(ev, platform_tag):
     if not t1 or not t2: return None
 
     comp = extract_competition(ev)
-    if not is_valid_match(t1, t2, comp): return None
+    
+    # এখানে ফিল্টার করা হচ্ছে যেন শুধু জনপ্রিয় ম্যাচ আসে
+    if not is_popular_and_valid(t1, t2, comp): return None
 
     sport = detect_sport(ev, comp)
     sub_name, default_channel = league_meta(sport, comp)
@@ -195,7 +208,15 @@ def build_entry(ev, platform_tag):
 
 def main():
     results, seen = [], set()
-    for name, url, tag in SOURCES:
+    
+    # সোর্স লিস্ট (সিক্রেট ভ্যারিয়েবল থেকে)
+    sources = [
+        ("fancode", FANCEODE_API, "Fancode"),
+        ("sonyliv", SONYLIV_API, "SonyLiv"),
+        ("tapmad",  TAPMAD_API, "Tapmad")
+    ]
+    
+    for name, url, tag in sources:
         data = fetch_json(url)
         events = _iter_events(data)
         
