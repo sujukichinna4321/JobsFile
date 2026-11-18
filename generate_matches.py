@@ -50,6 +50,13 @@ SOURCES = [
     ("tapmad",  "https://gist.githubusercontent.com/albatr0ssss/3cff7a26be49b1d352c15f615067e7cd/raw/tapmad_bd.json", "Tapmad"),
 ]
 
+# যেসব শব্দ থাকলে ম্যাচটি বাদ দেওয়া হবে (ফুটবল/ক্রিকেট ছাড়া অন্য খেলা)
+IGNORE_SPORTS = [
+    "doubles", "atp", "wta", "tur", "turin", "day 1", "day 2", "day 3", "day 4",
+    "race", "practice", "qualifying", "grand prix", "tennis", "golf",
+    "georgia", "spain", "barcelona", "las vegas", "circuit"
+]
+
 def fetch_json(url):
     try:
         r = requests.get(url, timeout=30)
@@ -109,7 +116,7 @@ def guess_format(comp):
     if "t20" in c: return "T20"
     if "odi" in c or "one day" in c: return "ODI"
     if "test" in c: return "Test"
-    return "T20"
+    return ""
 
 def league_meta(sport, comp):
     c = (comp or "").lower()
@@ -129,7 +136,7 @@ def get_poster_link(t1, t2, sub_name, fmt, sport, start):
         filename = f"{sport}_{t1_safe}_vs_{t2_safe}_{date_str}.jpg"
         
         sport_type = "Cricket" if sport == "cricket" else "Soccer"
-        match_type = fmt if fmt else "MATCH"
+        match_type = fmt if fmt else ""
         
         create_poster(
             team1=t1,
@@ -142,9 +149,23 @@ def get_poster_link(t1, t2, sub_name, fmt, sport, start):
         
         raw_link = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/posters/{filename}"
         return raw_link
-    except Exception as e:
-        print(f"Poster generation failed: {e}")
+    except Exception:
         return None
+
+def is_valid_match(t1, t2, comp):
+    """অপ্রয়োজনীয় ম্যাচ ফিল্টার করা"""
+    full_text = f"{t1} {t2} {comp}".lower()
+    
+    # TBC বা TBD থাকলে বাদ
+    if "tbc" in t1.lower() or "tbc" in t2.lower() or "tbd" in t1.lower():
+        return False
+        
+    # অন্য খেলাধুলা থাকলে বাদ
+    for word in IGNORE_SPORTS:
+        if word in full_text:
+            return False
+            
+    return True
 
 def build_entry(ev, platform_tag):
     start = parse_start(ev)
@@ -155,6 +176,10 @@ def build_entry(ev, platform_tag):
     if not t1 or not t2: return None
 
     comp = extract_competition(ev)
+    
+    if not is_valid_match(t1, t2, comp):
+        return None
+
     sport = detect_sport(ev, comp)
     sub_name, default_channel = league_meta(sport, comp)
     channel = extract_channel(ev, default_channel)
