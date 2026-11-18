@@ -36,6 +36,9 @@ jobs:
           SUBTITLE_SUFFIX: " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family."
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
           CRICKETDATA_KEY: ${{ secrets.CRICKETDATA_KEY }}
+          SonyLiv_API: ${{ secrets.SonyLiv_API }}
+          FANCEODE_API: ${{ secrets.FANCEODE_API }}
+          TAPMAD_API: ${{ secrets.TAPMAD_API }}
         run: python generate_matches.py
 
       - name: Commit and push notifications.json and Posters
