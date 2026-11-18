@@ -1,9 +1,8 @@
-import json, os, re, sys
+import json, os, re
 from datetime import datetime, timedelta
 import requests
 import pytz
 
-# লোকাল ইমপোর্ট
 from poster_maker import create_poster
 
 BD = pytz.timezone("Asia/Dhaka")
@@ -122,25 +121,16 @@ def league_meta(sport, comp):
 def bst_str(dt):
     return dt.strftime("%d-%m-%Y-%I:%M 00 %p").lower()
 
-def compute_multiple(sport, fmt, start_bd):
-    if sport == "football": return start_bd + timedelta(minutes=60)
-    if fmt == "T20": return start_bd + timedelta(minutes=105)
-    if fmt == "T10": return start_bd + timedelta(minutes=55)
-    if fmt == "ODI": return start_bd + timedelta(minutes=225)
-    if fmt == "Test": return start_bd + timedelta(minutes=150)
-    return None
-
 def get_poster_link(t1, t2, sub_name, fmt, sport, start):
     try:
-        t1_safe = t1.replace(" ", "_")
-        t2_safe = t2.replace(" ", "_")
+        t1_safe = re.sub(r'[^a-zA-Z0-9]', '_', t1)
+        t2_safe = re.sub(r'[^a-zA-Z0-9]', '_', t2)
         date_str = start.strftime("%Y%m%d")
         filename = f"{sport}_{t1_safe}_vs_{t2_safe}_{date_str}.jpg"
         
         sport_type = "Cricket" if sport == "cricket" else "Soccer"
         match_type = fmt if fmt else "MATCH"
         
-        # এখানে ব্রডকাস্টার প্যারামিটার বাদ দেওয়া হয়েছে
         create_poster(
             team1=t1,
             team2=t2,
@@ -153,7 +143,7 @@ def get_poster_link(t1, t2, sub_name, fmt, sport, start):
         raw_link = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/posters/{filename}"
         return raw_link
     except Exception as e:
-        print(f"Poster generation failed for {t1} vs {t2}: {e}")
+        print(f"Poster generation failed: {e}")
         return None
 
 def build_entry(ev, platform_tag):
@@ -174,42 +164,18 @@ def build_entry(ev, platform_tag):
     subtitle = f"{sub_name}{SUBTITLE_SUFFIX}"
     
     poster_url = get_poster_link(t1, t2, sub_name, fmt, sport, start)
-    
-    # যদি পোস্টার জেনারেট না হয়, তবে ডিফল্ট ছবি নিবে
     image = poster_url if poster_url else DEFAULT_IMAGE
     
     date_time = bst_str(start - timedelta(minutes=5))
 
-    is_premium = platform_tag in ["Fancode", "SonyLiv", "Tapmad"]
-    is_big_match = any(x in comp.lower() for x in ["world cup", "ipl", "bbl", "psl", "test", "odi", "champions league", "premier league", "nations league"])
-    
-    multiple_on = is_premium and is_big_match
-    multiple_time = ""
-    
-    if multiple_on:
-        mt = compute_multiple(sport, fmt, start)
-        if mt:
-            multiple_time = f"({bst_str(mt)})"
-        else:
-            multiple_on = False
-
     return {
         "Date & Time": date_time,
-        "multipleTimeRun": "On" if multiple_on else "Off",
-        "multipleTime": multiple_time,
+        "multipleTimeRun": "Off",
+        "multipleTime": "",
         "Title": title,
         "Subtitle": subtitle,
         "Image": image,
     }
-
-def _sort_key(x):
-    s = x["Date & Time"]
-    m = re.match(r"(\d{2})-(\d{2})-(\d{4})-(\d{2}):(\d{2})\s+00\s+([ap]m)", s)
-    if not m: return datetime.max
-    dd, mm, yy, hh, mi, ap = m.groups()
-    hh = int(hh) % 12
-    if ap == "pm": hh += 12
-    return datetime(int(yy), int(mm), int(dd), hh, int(mi))
 
 def main():
     results, seen = [], set()
@@ -220,15 +186,13 @@ def main():
         for ev in events:
             try:
                 entry = build_entry(ev, tag)
-            except Exception as e:
+            except Exception:
                 continue
             if not entry: continue
             key = (entry["Title"], entry["Date & Time"])
             if key in seen: continue
             seen.add(key)
             results.append(entry)
-
-    results.sort(key=_sort_key)
 
     with open("notifications.json", "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
