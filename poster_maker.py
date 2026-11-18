@@ -1,9 +1,7 @@
 import json
 import os
 import re
-import urllib.parse
 import requests
-import cairosvg
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
@@ -14,14 +12,14 @@ FONT_BOLD_PATH = "assets/fonts/Oswald-Bold.ttf"
 FONT_REGULAR_PATH = "assets/fonts/Oswald-Regular.ttf"
 OUTPUT_DIR = "posters"
 LOGO_BASE_DIR = "assets/Logo"
-COUNTRY_FLAG_DIR = "assets/Logo-Country" 
-DEFAULT_LOGO_PATH = "assets/Logo.png" # আপনার দেওয়া ডিফল্ট লোগো
+DEFAULT_LOGO_PATH = "assets/Logo.png" 
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-IGNORE_WORDS = ["women", "w", "fc", "afc", "cf", "sc", "club", "u19", "u21", "u23", "vs", "match", "round", "of", "day", "practice", "men"]
+IGNORE_WORDS = ["women", "w", "fc", "afc", "cf", "sc", "club", "u19", "u21", "u23", "vs", "match", "round", "of", "day", "practice", "men", "milan", "city", "united"]
 
 def clean_name(name):
+    """নাম থেকে অপ্রয়োজনীয় শব্দ বাদ দেয়"""
     name = name.lower()
     for word in IGNORE_WORDS:
         name = re.sub(r'\b' + re.escape(word) + r'\b', '', name)
@@ -31,36 +29,33 @@ def find_logo_path(team_name):
     team_clean = clean_name(team_name)
     if not team_clean: return None
     
-    # ক্লাব লোগো খোঁজা
+    best_match = None
+    
+    # পুরো ফোল্ডারে রিকার্সিভলি খোঁজা
     for root, dirs, files in os.walk(LOGO_BASE_DIR):
         for file in files:
             if file.lower().endswith(".png"):
                 file_name_clean = clean_name(file.lower().replace(".png", ""))
+                
+                # ১. যদি হুবহু মিলে যায়
                 if team_clean == file_name_clean:
                     return os.path.join(root, file)
-    return None
-
-def find_flag_path(team_name):
-    # শুধুমাত্র যদি পুরো নামের সাথে মিলে যায় তবেই ফ্ল্যাগ নেবে, আংশিক নামে নয়
-    if not os.path.exists(COUNTRY_FLAG_DIR): return None
-    
-    team_clean = clean_name(team_name)
-    
-    # সরাসরি ISO কোড (২ অক্ষরের) দিয়ে ম্যাচ খোঁজার চেষ্টা
-    # এটি ম্যাপিং ছাড়া অন্ধভাবে ফ্ল্যাগ ধরবে না
-    return None 
+                
+                # ২. যদি আংশিক মিলে যায় (যেমন Inter এর সাথে Inter Milan)
+                if team_clean in file_name_clean or file_name_clean in team_clean:
+                    best_match = os.path.join(root, file)
+                    
+    return best_match
 
 def get_team_logo(team_name):
-    # ১. ক্লাব লোগো (PNG) খোঁজা
     path = find_logo_path(team_name)
     if path and os.path.exists(path):
         return Image.open(path).convert("RGBA")
     
-    # ২. ডিফল্ট লোগো ব্যবহার করা (যেহেতু ভুল ফ্ল্যাগ বসানো বন্ধ করতে হবে)
+    # ডিফল্ট লোগো
     if os.path.exists(DEFAULT_LOGO_PATH):
         return Image.open(DEFAULT_LOGO_PATH).convert("RGBA")
 
-    # ৩. কিছুই না পেলে ট্রান্সপারেন্ট প্লেসহোল্ডার
     img = Image.new("RGBA", (300, 300), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     draw.ellipse((0, 0, 300, 300), fill=(255, 255, 255, 50))
@@ -108,7 +103,7 @@ def create_poster(team1, team2, series_name, match_type, output_filename, sport_
     draw.text(((POSTER_WIDTH - text_w) / 2 + 2, 32), series_clean, font=font_series_fit, fill="black")
     draw.text(((POSTER_WIDTH - text_w) / 2, 30), series_clean, font=font_series_fit, fill="white")
 
-    logo_size = 300 # লোগো সাইজ
+    logo_size = 300
     logo1 = get_team_logo(team1).resize((logo_size, logo_size), Image.Resampling.LANCZOS)
     logo2 = get_team_logo(team2).resize((logo_size, logo_size), Image.Resampling.LANCZOS)
     
