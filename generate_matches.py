@@ -1,24 +1,19 @@
 import json, os, re, sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import requests
 import pytz
 
-# poster_maker থেকে ফাংশন ইমপোর্ট করা
-try:
-    from assets.poster_maker import create_poster
-except ImportError:
-    print("Warning: poster_maker.py not found in assets folder. Posters will not be generated.")
+# লোকাল ইমপোর্ট
+from poster_maker import create_poster
 
-# বাংলাদেশ টাইমজোন
 BD = pytz.timezone("Asia/Dhaka")
 NOW_BD = datetime.now(BD)
 TODAY_BD = NOW_BD.date()
-END_DATE = TODAY_BD + timedelta(days=2) # আগামী ৩ দিন
+END_DATE = TODAY_BD + timedelta(days=2)
 
 DEFAULT_IMAGE = os.environ.get("DEFAULT_IMAGE", "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png")
 SUBTITLE_SUFFIX = os.environ.get("SUBTITLE_SUFFIX", " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family.")
 
-# গিটহাব রিপোজিটরি কনফিগারেশন (লিংক তৈরির জন্য)
 GITHUB_USER = "sujukichinna4321"
 GITHUB_REPO = "JobsFile"
 GITHUB_BRANCH = "main"
@@ -61,7 +56,7 @@ def fetch_json(url):
         r = requests.get(url, timeout=30)
         r.raise_for_status()
         return r.json()
-    except Exception as e:
+    except Exception:
         return []
 
 def _iter_events(data):
@@ -102,11 +97,6 @@ def extract_channel(ev, default_channel):
         if isinstance(v, list) and len(v) > 0 and isinstance(v[0], str): return v[0].strip()
     return default_channel
 
-def extract_image(ev):
-    if "src" in ev and isinstance(ev["src"], str): return ev["src"]
-    if "ThumbnailStandard" in ev and isinstance(ev["ThumbnailStandard"], str): return ev["ThumbnailStandard"]
-    return ""
-
 def detect_sport(ev, comp):
     s = (ev.get("sport") or ev.get("sportType") or ev.get("event_category") or "").lower()
     c = (comp or "").lower()
@@ -140,30 +130,26 @@ def compute_multiple(sport, fmt, start_bd):
     if fmt == "Test": return start_bd + timedelta(minutes=150)
     return None
 
-def get_poster_link(t1, t2, sub_name, fmt, channel, sport, start):
-    """পোস্টার তৈরি করে তার গিটহাব লিংক রিটার্ন করে"""
+def get_poster_link(t1, t2, sub_name, fmt, sport, start):
     try:
-        # ফাইলের নাম তৈরি (স্পেস থাকলে আন্ডারস্কোর)
         t1_safe = t1.replace(" ", "_")
         t2_safe = t2.replace(" ", "_")
         date_str = start.strftime("%Y%m%d")
         filename = f"{sport}_{t1_safe}_vs_{t2_safe}_{date_str}.jpg"
         
-        # পোস্টার মেকার কল করা
         sport_type = "Cricket" if sport == "cricket" else "Soccer"
         match_type = fmt if fmt else "MATCH"
         
+        # এখানে ব্রডকাস্টার প্যারামিটার বাদ দেওয়া হয়েছে
         create_poster(
             team1=t1,
             team2=t2,
             series_name=sub_name,
             match_type=match_type,
-            broadcaster=channel,
             output_filename=filename,
             sport_type=sport_type
         )
         
-        # গিটহাব raw লিংক তৈরি
         raw_link = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/posters/{filename}"
         return raw_link
     except Exception as e:
@@ -173,7 +159,6 @@ def get_poster_link(t1, t2, sub_name, fmt, channel, sport, start):
 def build_entry(ev, platform_tag):
     start = parse_start(ev)
     if not start: return None
-    
     if not (TODAY_BD <= start.date() <= END_DATE): return None 
         
     t1, t2 = extract_teams(ev)
@@ -183,15 +168,15 @@ def build_entry(ev, platform_tag):
     sport = detect_sport(ev, comp)
     sub_name, default_channel = league_meta(sport, comp)
     channel = extract_channel(ev, default_channel)
-    
     fmt = guess_format(comp) if sport == "cricket" else ""
 
     title = f"{t1} 🆚 {t2} । Watch on {channel}"
     subtitle = f"{sub_name}{SUBTITLE_SUFFIX}"
     
-    # --- পোস্টার তৈরি এবং ইমেজ লিংক সেট করা ---
-    poster_url = get_poster_link(t1, t2, sub_name, fmt, channel, sport, start)
-    image = poster_url if poster_url else (extract_image(ev) or DEFAULT_IMAGE)
+    poster_url = get_poster_link(t1, t2, sub_name, fmt, sport, start)
+    
+    # যদি পোস্টার জেনারেট না হয়, তবে ডিফল্ট ছবি নিবে
+    image = poster_url if poster_url else DEFAULT_IMAGE
     
     date_time = bst_str(start - timedelta(minutes=5))
 
@@ -236,7 +221,6 @@ def main():
             try:
                 entry = build_entry(ev, tag)
             except Exception as e:
-                print(f"Error processing event: {e}")
                 continue
             if not entry: continue
             key = (entry["Title"], entry["Date & Time"])
