@@ -33,9 +33,7 @@ jobs:
       - name: Generate notifications.json and Posters
         env:
           DEFAULT_IMAGE: "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png"
-          SUBTITLE_SUFFIX: " | Select 🅻🅸🆅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family."
-          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
-          CRICKETDATA_KEY: ${{ secrets.CRICKETDATA_KEY }}
+          SUBTITLE_SUFFIX: " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family."
           SonyLiv_API: ${{ secrets.SonyLiv_API }}
           FANCEODE_API: ${{ secrets.FANCEODE_API }}
           TAPMAD_API: ${{ secrets.TAPMAD_API }}
