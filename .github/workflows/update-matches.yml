@@ -2,7 +2,7 @@ name: Update Match Notifications
 
 on:
   schedule:
-    - cron: '5 18,0,6,12 * * *'  
+    - cron: '0 */6 * * *'  # প্রতি ৬ ঘন্টা পর পর রান হবে
   workflow_dispatch:
 
 permissions:
@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
+        with:
+          ref: gh-pages
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -32,18 +34,17 @@ jobs:
 
       - name: Generate notifications.json and Posters
         env:
-          DEFAULT_IMAGE: "https://i.postimg.cc/2jPs7rBr/HOME-LIVE-EVENT.png"
           SUBTITLE_SUFFIX: " | Select 🅻🅸🅅🅴 🆂🅿🅾🆁🆃🆂 Button, Share Our Apps With Your Friends & Family."
           SonyLiv_API: ${{ secrets.SonyLiv_API }}
           FANCEODE_API: ${{ secrets.FANCEODE_API }}
           TAPMAD_API: ${{ secrets.TAPMAD_API }}
         run: python generate_matches.py
 
-      - name: Commit and push notifications.json and Posters
+      - name: Commit and push to gh-pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
           git add notifications.json
           git add -A posters/
           git commit -m "Auto-update notifications and posters ($(TZ=Asia/Dhaka date +'%d-%m-%Y %H:%M'))" || echo "No changes"
-          git push
+          git push origin HEAD:gh-pages
