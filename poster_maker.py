@@ -19,7 +19,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 IGNORE_WORDS = ["women", "w", "fc", "afc", "cf", "sc", "club", "u19", "u21", "u23", "vs", "match", "round", "of", "day", "practice", "men", "milan", "city", "united"]
 
 def clean_name(name):
-    """নাম থেকে অপ্রয়োজনীয় শব্দ বাদ দেয়"""
     name = name.lower()
     for word in IGNORE_WORDS:
         name = re.sub(r'\b' + re.escape(word) + r'\b', '', name)
@@ -28,34 +27,24 @@ def clean_name(name):
 def find_logo_path(team_name):
     team_clean = clean_name(team_name)
     if not team_clean: return None
-    
     best_match = None
     
-    # পুরো ফোল্ডারে রিকার্সিভলি খোঁজা
     for root, dirs, files in os.walk(LOGO_BASE_DIR):
         for file in files:
             if file.lower().endswith(".png"):
                 file_name_clean = clean_name(file.lower().replace(".png", ""))
-                
-                # ১. যদি হুবহু মিলে যায়
                 if team_clean == file_name_clean:
                     return os.path.join(root, file)
-                
-                # ২. যদি আংশিক মিলে যায় (যেমন Inter এর সাথে Inter Milan)
                 if team_clean in file_name_clean or file_name_clean in team_clean:
                     best_match = os.path.join(root, file)
-                    
     return best_match
 
 def get_team_logo(team_name):
     path = find_logo_path(team_name)
     if path and os.path.exists(path):
         return Image.open(path).convert("RGBA")
-    
-    # ডিফল্ট লোগো
     if os.path.exists(DEFAULT_LOGO_PATH):
         return Image.open(DEFAULT_LOGO_PATH).convert("RGBA")
-
     img = Image.new("RGBA", (300, 300), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     draw.ellipse((0, 0, 300, 300), fill=(255, 255, 255, 50))
@@ -92,38 +81,51 @@ def create_poster(team1, team2, series_name, match_type, output_filename, sport_
 
     try:
         font_match = ImageFont.truetype(FONT_BOLD_PATH, 30)
-        font_v = ImageFont.truetype(FONT_BOLD_PATH, 70)
+        font_vs = ImageFont.truetype(FONT_BOLD_PATH, 90) # VS ফন্ট বড় করা হলো
+        font_powered = ImageFont.truetype(FONT_REGULAR_PATH, 25) # Powered by ফন্ট
     except:
-        font_match = font_v = ImageFont.load_default()
+        font_match = font_vs = font_powered = ImageFont.load_default()
 
+    # ১. সিরিজের নাম
     series_clean = re.sub(r'[^\w\s\-/\.]', '', series_name).strip().upper()
     font_series_fit = get_font_size_to_fit(series_clean, FONT_BOLD_PATH, 1000, 40)
     bbox = draw.textbbox((0, 0), series_clean, font=font_series_fit)
     text_w = bbox[2] - bbox[0]
-    draw.text(((POSTER_WIDTH - text_w) / 2 + 2, 32), series_clean, font=font_series_fit, fill="black")
-    draw.text(((POSTER_WIDTH - text_w) / 2, 30), series_clean, font=font_series_fit, fill="white")
+    draw.text(((POSTER_WIDTH - text_w) / 2 + 2, 22), series_clean, font=font_series_fit, fill="black")
+    draw.text(((POSTER_WIDTH - text_w) / 2, 20), series_clean, font=font_series_fit, fill="white")
 
+    # ২. Powered by SAWARID APPS (নতুন যুক্ত হলো)
+    powered_text = "Powered by: SAWARID APPS"
+    bbox_p = draw.textbbox((0, 0), powered_text, font=font_powered)
+    p_w = bbox_p[2] - bbox_p[0]
+    draw.text(((POSTER_WIDTH - p_w) / 2, 75), powered_text, font=font_powered, fill="#CCCCCC")
+
+    # ৩. লোগো বসানো
     logo_size = 300
     logo1 = get_team_logo(team1).resize((logo_size, logo_size), Image.Resampling.LANCZOS)
     logo2 = get_team_logo(team2).resize((logo_size, logo_size), Image.Resampling.LANCZOS)
     
-    canvas.paste(logo1, (POSTER_WIDTH//4 - logo_size//2, POSTER_HEIGHT//2 - 150), logo1)
-    canvas.paste(logo2, (3*POSTER_WIDTH//4 - logo_size//2, POSTER_HEIGHT//2 - 150), logo2)
+    canvas.paste(logo1, (POSTER_WIDTH//4 - logo_size//2, POSTER_HEIGHT//2 - 130), logo1)
+    canvas.paste(logo2, (3*POSTER_WIDTH//4 - logo_size//2, POSTER_HEIGHT//2 - 130), logo2)
 
     draw = ImageDraw.Draw(canvas)
-    bbox_v = draw.textbbox((0, 0), "V", font=font_v)
-    v_w = bbox_v[2] - bbox_v[0]
-    draw.text(((POSTER_WIDTH - v_w) / 2, POSTER_HEIGHT//2 - 60), "V", font=font_v, fill="white")
 
+    # ৪. মাঝখানে VS (বড় করে)
+    bbox_vs = draw.textbbox((0, 0), "VS", font=font_vs)
+    vs_w = bbox_vs[2] - bbox_vs[0]
+    draw.text(((POSTER_WIDTH - vs_w) / 2, POSTER_HEIGHT//2 - 60), "VS", font=font_vs, fill="white")
+
+    # ৫. দলের নাম
     team_text = f"{team1.upper()} vs {team2.upper()}"
     font_teams_fit = get_font_size_to_fit(team_text, FONT_BOLD_PATH, 1100, 65)
     bbox_t = draw.textbbox((0, 0), team_text, font=font_teams_fit)
     t_w = bbox_t[2] - bbox_t[0]
     
-    text_y = POSTER_HEIGHT - 140
+    text_y = POSTER_HEIGHT - 130
     draw.text(((POSTER_WIDTH - t_w) / 2 + 2, text_y + 2), team_text, font=font_teams_fit, fill="black")
     draw.text(((POSTER_WIDTH - t_w) / 2, text_y), team_text, font=font_teams_fit, fill="white")
 
+    # ৬. ম্যাচের ধরন (যদি থাকে)
     if match_type:
         m_text = match_type.upper()
         bbox_m = draw.textbbox((0, 0), m_text, font=font_match)
