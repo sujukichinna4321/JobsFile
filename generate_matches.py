@@ -17,31 +17,32 @@ GITHUB_USER = "sujukichinna4321"
 GITHUB_REPO = "JobsFile"
 GITHUB_BRANCH = "main"
 
+# এখানে ইমোজি বাদ দেওয়া হয়েছে
 FOOTBALL_LEAGUES = {
-    "premier league":   ("🏆 ENGLISH ⚽ PREMIER LEAGUE 2026/27", "TNT 1"),
-    "la liga":          ("🏆 SPANISH ⚽ LA LIGA 2026/27",       "SonyLiv"),
-    "bundesliga":       ("🏆 GERMAN ⚽ BUNDESLIGA 2026/27",      "SonyLiv"),
-    "serie a":          ("🏆 ITALIAN ⚽ SERIE A 2026/27",        "SonyLiv"),
-    "ligue 1":          ("🏆 FRENCH ⚽ LIGUE 1 2026/27",         "SonyLiv"),
-    "champions league": ("🏆 UEFA ⚽ CHAMPIONS LEAGUE 2026/27",  "SonyLiv"),
-    "europa league":    ("🏆 UEFA ⚽ EUROPA LEAGUE 2026/27",     "SonyLiv"),
-    "nations league":   ("🏆 Friendly Match ⚽ NATIONS LEAGUE 2026/27", "SonyLiv"),
-    "fifa world cup":   ("🏆 FIFA ⚽ WORLD CUP 2026",            "T Sports"),
-    "friendly":         ("🏆 Friendly Match ⚽ 2026",            "T Sports"),
+    "premier league":   ("ENGLISH PREMIER LEAGUE 2026/27", "TNT 1"),
+    "la liga":          ("SPANISH LA LIGA 2026/27",       "SonyLiv"),
+    "bundesliga":       ("GERMAN BUNDESLIGA 2026/27",      "SonyLiv"),
+    "serie a":          ("ITALIAN SERIE A 2026/27",        "SonyLiv"),
+    "ligue 1":          ("FRENCH LIGUE 1 2026/27",         "SonyLiv"),
+    "champions league": ("UEFA CHAMPIONS LEAGUE 2026/27",  "SonyLiv"),
+    "europa league":    ("UEFA EUROPA LEAGUE 2026/27",     "SonyLiv"),
+    "nations league":   ("FRIENDLY MATCH NATIONS LEAGUE 2026/27", "SonyLiv"),
+    "fifa world cup":   ("FIFA WORLD CUP 2026",            "T Sports"),
+    "friendly":         ("FRIENDLY MATCH 2026",            "T Sports"),
 }
 
 CRICKET_LEAGUES = {
-    "t20i":      ("🏏 T20I CRICKET 2026",              "Fancode"),
-    "t20":       ("🏏 T20 CRICKET 2026",               "Fancode"),
-    "t10":       ("🏏 T10 CRICKET 2026",               "Fancode"),
-    "odi":       ("🏏 ODI CRICKET 2026",               "Fancode"),
-    "test":      ("🏏 TEST CRICKET 2026",              "Fancode"),
-    "world cup": ("🏆 ICC 🏏 MEN'S T20 WORLD CUP 2026", "Willow"),
-    "ipl":       ("🏏 INDIAN PREMIER LEAGUE 2026",     "SonyLiv"),
-    "bbl":       ("🏏 BIG BASH LEAGUE 2026",           "SonyLiv"),
-    "psl":       ("🏏 PSL 2026",                       "Tapmad"),
-    "bpl":       ("🏏 BPL 2026",                       "T Sports"),
-    "nepal":     ("🏏 NEPAL PREMIER LEAGUE 2026",      "Fancode"),
+    "t20i":      ("T20I CRICKET 2026",              "Fancode"),
+    "t20":       ("T20 CRICKET 2026",               "Fancode"),
+    "t10":       ("T10 CRICKET 2026",               "Fancode"),
+    "odi":       ("ODI CRICKET 2026",               "Fancode"),
+    "test":      ("TEST CRICKET 2026",              "Fancode"),
+    "world cup": ("ICC MEN'S T20 WORLD CUP 2026", "Willow"),
+    "ipl":       ("INDIAN PREMIER LEAGUE 2026",     "SonyLiv"),
+    "bbl":       ("BIG BASH LEAGUE 2026",           "SonyLiv"),
+    "psl":       ("PSL 2026",                       "Tapmad"),
+    "bpl":       ("BPL 2026",                       "T Sports"),
+    "nepal":     ("NEPAL PREMIER LEAGUE 2026",      "Fancode"),
 }
 
 SOURCES = [
@@ -50,7 +51,6 @@ SOURCES = [
     ("tapmad",  "https://gist.githubusercontent.com/albatr0ssss/3cff7a26be49b1d352c15f615067e7cd/raw/tapmad_bd.json", "Tapmad"),
 ]
 
-# যেসব শব্দ থাকলে ম্যাচটি বাদ দেওয়া হবে (ফুটবল/ক্রিকেট ছাড়া অন্য খেলা)
 IGNORE_SPORTS = [
     "doubles", "atp", "wta", "tur", "turin", "day 1", "day 2", "day 3", "day 4",
     "race", "practice", "qualifying", "grand prix", "tennis", "golf",
@@ -123,7 +123,7 @@ def league_meta(sport, comp):
     table = CRICKET_LEAGUES if sport == "cricket" else FOOTBALL_LEAGUES
     for key, val in table.items():
         if key in c: return val
-    return ("🏏 CRICKET 2026" if sport == "cricket" else "⚽ FOOTBALL 2026", "Fancode" if sport == "cricket" else "T Sports")
+    return ("CRICKET 2026" if sport == "cricket" else "FOOTBALL 2026", "Fancode" if sport == "cricket" else "T Sports")
 
 def bst_str(dt):
     return dt.strftime("%d-%m-%Y-%I:%M 00 %p").lower()
@@ -153,18 +153,12 @@ def get_poster_link(t1, t2, sub_name, fmt, sport, start):
         return None
 
 def is_valid_match(t1, t2, comp):
-    """অপ্রয়োজনীয় ম্যাচ ফিল্টার করা"""
     full_text = f"{t1} {t2} {comp}".lower()
-    
-    # TBC বা TBD থাকলে বাদ
     if "tbc" in t1.lower() or "tbc" in t2.lower() or "tbd" in t1.lower():
         return False
-        
-    # অন্য খেলাধুলা থাকলে বাদ
     for word in IGNORE_SPORTS:
         if word in full_text:
             return False
-            
     return True
 
 def build_entry(ev, platform_tag):
@@ -176,9 +170,7 @@ def build_entry(ev, platform_tag):
     if not t1 or not t2: return None
 
     comp = extract_competition(ev)
-    
-    if not is_valid_match(t1, t2, comp):
-        return None
+    if not is_valid_match(t1, t2, comp): return None
 
     sport = detect_sport(ev, comp)
     sub_name, default_channel = league_meta(sport, comp)
@@ -190,7 +182,6 @@ def build_entry(ev, platform_tag):
     
     poster_url = get_poster_link(t1, t2, sub_name, fmt, sport, start)
     image = poster_url if poster_url else DEFAULT_IMAGE
-    
     date_time = bst_str(start - timedelta(minutes=5))
 
     return {
