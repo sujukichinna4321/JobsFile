@@ -21,7 +21,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install deps
-        run: pip install requests pytz Pillow
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcairo2
+          pip install requests pytz Pillow cairosvg
+
+      - name: Clean old posters
+        run: |
+          rm -rf posters/*
+          mkdir -p posters
 
       - name: Generate notifications.json and Posters
         env:
@@ -35,6 +42,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
-          git add notifications.json posters/
+          git add notifications.json
+          git add -A posters/
           git commit -m "Auto-update notifications and posters ($(TZ=Asia/Dhaka date +'%d-%m-%Y %H:%M'))" || echo "No changes"
           git push
